@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const { User, Post, Comment, Vote } = require('../../models');
 
-//Get /api/users
+// get all users
 router.get('/', (req, res) => {
     User.findAll({
         attributes: { exclude: ['password'] }
@@ -24,7 +24,6 @@ router.get('/:id', (req, res) => {
                 model: Post,
                 attributes: ['id', 'title', 'post_url', 'created_at']
             },
-            // include the Comment model here:
             {
                 model: Comment,
                 attributes: ['id', 'comment_text', 'created_at'],
@@ -70,9 +69,14 @@ router.post('/', (req, res) => {
                 res.json(dbUserData);
             });
         })
+        .catch(err => {
+            console.log(err);
+            res.status(500).json(err);
+        });
 });
 
 router.post('/login', (req, res) => {
+    // expects {email: 'lernantino@gmail.com', password: 'password1234'}
     User.findOne({
         where: {
             email: req.body.email
@@ -82,6 +86,7 @@ router.post('/login', (req, res) => {
             res.status(400).json({ message: 'No user with that email address!' });
             return;
         }
+
         const validPassword = dbUserData.checkPassword(req.body.password);
 
         if (!validPassword) {
@@ -90,14 +95,11 @@ router.post('/login', (req, res) => {
         }
 
         req.session.save(() => {
-            // declare session variables
             req.session.user_id = dbUserData.id;
             req.session.username = dbUserData.username;
             req.session.loggedIn = true;
 
-
             res.json({ user: dbUserData, message: 'You are now logged in!' });
-
         });
     });
 });
@@ -111,10 +113,12 @@ router.post('/logout', (req, res) => {
     else {
         res.status(404).end();
     }
-
 });
 
 router.put('/:id', (req, res) => {
+    // expects {username: 'Lernantino', email: 'lernantino@gmail.com', password: 'password1234'}
+
+    // pass in req.body instead to only update what's passed through
     User.update(req.body, {
         individualHooks: true,
         where: {
@@ -122,7 +126,7 @@ router.put('/:id', (req, res) => {
         }
     })
         .then(dbUserData => {
-            if (!dbUserData[0]) {
+            if (!dbUserData) {
                 res.status(404).json({ message: 'No user found with this id' });
                 return;
             }
@@ -152,7 +156,5 @@ router.delete('/:id', (req, res) => {
             res.status(500).json(err);
         });
 });
-
-
 
 module.exports = router;
